@@ -1,0 +1,154 @@
+<div class="container mt-5">
+    <h1 class="text-center">Karyawan List</h1>
+
+    <!-- Form to Add New Employee -->
+    <form id="addEmployeeForm" class="my-4">
+        <div class="input-group">
+            <input type="text" id="newName" class="form-control" placeholder="Employee Name" required>
+            <input type="text" id="newPosition" class="form-control" placeholder="Position" required>
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Add Employee</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- List of Karyawan -->
+    <ul id="employeeList" class="list-group">
+        <% karyawan.forEach(employee => { %>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span><%= employee.nama %> - <%= employee.posisi %></span>
+                <div>
+                    <button class="btn btn-sm btn-success mr-2 editBtn" data-id="<%= employee.id %>">Edit</button>
+                    <button class="btn btn-sm btn-danger deleteBtn" data-id="<%= employee.id %>">Delete</button>
+                </div>
+            </li>
+        <% }); %>
+    </ul>
+
+    <!-- Edit Karyawan Modal -->
+    <div id="editModal" class="modal fade" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Karyawan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editEmployeeForm">
+                        <div class="form-group">
+                            <label for="editName">Employee Name</label>
+                            <input type="text" id="editName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPosition">Position</label>
+                            <input type="text" id="editPosition" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Menangani pengiriman form untuk menambah karyawan baru
+    document.getElementById('addEmployeeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = document.getElementById('newName').value;
+        const position = document.getElementById('newPosition').value;
+
+        if (name && position) {
+            fetch('/karyawan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nama: name,
+                    posisi: position
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const employeeList = document.getElementById('employeeList');
+                const newEmployee = document.createElement('li');
+                newEmployee.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                newEmployee.innerHTML = `
+                    <span>${data.nama} - ${data.posisi}</span>
+                    <div>
+                        <button class="btn btn-sm btn-success mr-2 editBtn" data-id="${data.id}">Edit</button>
+                        <button class="btn btn-sm btn-danger deleteBtn" data-id="${data.id}">Delete</button>
+                    </div>
+                `;
+                employeeList.appendChild(newEmployee);
+                document.getElementById('addEmployeeForm').reset();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    });
+
+    // Menangani klik pada tombol Edit untuk membuka modal dan mengedit karyawan
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('editBtn')) {
+            const employeeId = e.target.dataset.id;
+
+            fetch(`/karyawan/${employeeId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('editName').value = data.nama;
+                    document.getElementById('editPosition').value = data.posisi;
+
+                    document.getElementById('editEmployeeForm').onsubmit = function(e) {
+                        e.preventDefault();
+                        const updatedName = document.getElementById('editName').value;
+                        const updatedPosition = document.getElementById('editPosition').value;
+
+                        fetch(`/karyawan/${employeeId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                nama: updatedName,
+                                posisi: updatedPosition
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            const employeeItem = document.querySelector(`button[data-id='${employeeId}']`).closest('li');
+                            employeeItem.querySelector('span').textContent = `${data.nama} - ${data.posisi}`;
+                            $('#editModal').modal('hide');
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                    };
+                });
+        }
+    });
+
+    // Menangani klik pada tombol Delete untuk menghapus karyawan
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('deleteBtn')) {
+            const employeeId = e.target.dataset.id;
+
+            fetch(`/karyawan/${employeeId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    const employeeItem = e.target.closest('li');
+                    employeeItem.remove();
+                } else {
+                    console.error('Failed to delete employee');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    });
+</script>

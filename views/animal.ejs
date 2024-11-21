@@ -1,0 +1,136 @@
+<div class="container mt-5">
+    <h1 class="text-center">Animal List</h1>
+
+    <!-- Form to Add New Animal -->
+    <form id="addAnimalForm" class="my-4">
+        <div class="input-group">
+            <input type="text" id="newAnimal" class="form-control" placeholder="Animal Name" required>
+            <input type="text" id="newSpecies" class="form-control" placeholder="Species" required>
+            <select id="newGender" class="form-control" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">Add Animal</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- List of Animals -->
+    <ul id="animalList" class="list-group">
+        <% animals.forEach(animal => { %>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="<%= animal.completed ? 'completed' : '' %>">
+                    <%= animal.hewan %> (<%= animal.species %>, <%= animal.gender %>)
+                </span>
+                <div>
+                    <button class="btn btn-sm btn-success mr-2 editBtn" data-id="<%= animal.id %>">Edit</button>
+                    <button class="btn btn-sm btn-danger deleteBtn" data-id="<%= animal.id %>">Delete</button>
+                </div>
+            </li>
+        <% }); %>
+    </ul>
+
+    <!-- Edit Animal Modal -->
+    <div id="editModal" class="modal fade" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Animal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAnimalForm">
+                        <div class="form-group">
+                            <label for="editAnimal">Animal Name</label>
+                            <input type="text" id="editAnimal" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editSpecies">Species</label>
+                            <input type="text" id="editSpecies" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editGender">Gender</label>
+                            <select id="editGender" class="form-control" required>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Add new animal
+        $('#addAnimalForm').on('submit', function (e) {
+            e.preventDefault();
+            const hewan = $('#newAnimal').val().trim();
+            const species = $('#newSpecies').val().trim();
+            const gender = $('#newGender').val();
+            if (hewan && species && gender) {
+                $.ajax({
+                    url: '/animals',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ hewan: hewan, species: species, gender: gender }),
+                    success: function (newAnimal) {
+                        location.reload(); // Reload to show the new animal
+                    },
+                    error: function (error) {
+                        console.error("Error adding animal:", error.responseText);
+                    }
+                });
+            }
+        });
+
+        // Delete an animal
+        $('.deleteBtn').on('click', function () {
+            const id = $(this).data('id');
+            $.ajax({
+                url: '/animals/' + id,
+                type: 'DELETE',
+                success: function () {
+                    location.reload(); // Reload to show updated list
+                }
+            });
+        });
+
+        // Show edit modal with the current animal
+        let editId;
+        $('.editBtn').on('click', function () {
+            editId = $(this).data('id');
+            const currentAnimal = $(this).closest('li').find('span').text();
+            const [name, species, gender] = currentAnimal.split(' (');
+            $('#editAnimal').val(name);
+            $('#editSpecies').val(species.replace(')', '').trim());
+            $('#editGender').val(gender.replace(')', '').trim());
+            $('#editModal').modal('show');
+        });
+
+        // Update animal on form submission
+        $('#editAnimalForm').on('submit', function (e) {
+            e.preventDefault();
+            const hewan = $('#editAnimal').val().trim();
+            const species = $('#editSpecies').val().trim();
+            const gender = $('#editGender').val();
+            if (hewan && species && gender) {
+                $.ajax({
+                    url: '/animals/' + editId,
+                    type: 'PUT',
+                    data: JSON.stringify({ hewan: hewan, species: species, gender: gender }),
+                    contentType: 'application/json',
+                    success: function () {
+                        location.reload(); // Reload to show the updated animal
+                    }
+                });
+            }
+        });
+    });
+</script>
